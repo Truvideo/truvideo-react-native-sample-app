@@ -68,9 +68,11 @@ function VideoScreen() {
         </View>
     );
 
-    const __concatVideos = () => {
+    const __concatVideos = async() => {
 
-        getResultPath(`${Date.now()}-concatVideo.mp4`)
+        const videoStatus = await __compareVideos();
+        if(videoStatus){
+            getResultPath(`${Date.now()}-concatVideo.mp4`)
             .then((resulthPath) => {
                 concatVideos(selectedItems, resulthPath)
                     .then((result) => {
@@ -83,7 +85,9 @@ function VideoScreen() {
             .catch((err) => {
                 console.error('err', err);
             });
-
+        }else{
+            console.log('Not concat video')
+        }
     };
 
     const __mergeVideos = () => {
@@ -175,11 +179,13 @@ function VideoScreen() {
         });
     };
 
-    const __compareVideos = () => {
+    const __compareVideos = ():any => {
         compareVideos(selectedItems).then((result) => {
             console.log('result', result);
+            return result;
         }).catch((error) => {
             console.error('error', error);
+            return false;
         });
     };
 

@@ -71,6 +71,7 @@ function HomeScreen() {
 
     const inItCamera = async () => {
         await AsyncStorage.removeItem('fileList');
+        await AsyncStorage.removeItem('fileImageList');
         initCameraScreen(configuration)
             .then((res) => {
                 let obj = JSON.parse(res);

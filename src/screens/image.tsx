@@ -21,11 +21,11 @@ function ImageScreen() {
     };
 
 
-    const __editImage = (selectedItems: string[]) => {
+    const __editImage = (selectedItems: string) => {
 
         getFilePath(`${Date.now()}-editImage.png`)
             .then((resulthPath) => {
-                launchImageEdit(selectedItems[0], resulthPath)
+                launchImageEdit(selectedItems, resulthPath)
                     .then((result) => {
                         console.log('Image edited successfully', result);
                     })
@@ -43,7 +43,6 @@ function ImageScreen() {
             <TouchableOpacity onPress={() => __editImage(item.filePath)}>
                     <Text style={{ marginRight: 10 }}>{item.filePath}</Text>
             </TouchableOpacity>
-
         </View>
     );
 
@@ -57,8 +56,6 @@ function ImageScreen() {
                     keyExtractor={(item) => item.createdAt}
                 />
             </View>
-            
-
         </View>
     );
 }
