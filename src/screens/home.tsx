@@ -20,7 +20,7 @@ function HomeScreen() {
     const [metaData, setMetaData] = React.useState<any>(undefined);
     useEffect(() => {
 
-        authentication('EPhPPsbv7e', '9lHCnkfeLl')
+        authentication('EPhPPsbv7e', '9lHCnkfeLl', "")
             .then((res) => {
                 //handle response
                 console.log('res', res);
