@@ -19,6 +19,7 @@
     "react-native-screens": "^3.34.0",
     "truvideo-react-camera-sdk": "git+https://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@github.com/Truvideo/TruVideoReactCameraSdk.git#release-version-76",
     "truvideo-react-core-sdk": "git+https://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@github.com/Truvideo/TruVideoReactCoreSdk.git#release-version-76",
+    "truvideo-react-image-sdk": "git+https://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@github.com/Truvideo/TruVideoReactImageSdk.git#release-version-76",
     "truvideo-react-media-sdk": "git+https://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@github.com/Truvideo/TruVideoReactMediaSdk.git#release-version-76",
     "truvideo-react-video-sdk": "git+https://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@github.com/Truvideo/TruVideoReactVideoSdk.git#release-version-76"
   },

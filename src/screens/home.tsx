@@ -11,6 +11,20 @@ import {
     Mode,
 } from 'truvideo-react-camera-sdk';
 import { uploadMedia } from 'truvideo-react-media-sdk';
+
+type MediaItem = {
+    cameraLensFacing: string;
+    createdAt: number;
+    duration: number;
+    filePath: string;
+    id: string;
+    resolution: {
+        height: number;
+        width: number;
+    };
+    rotation: string;
+    type: string; // "VIDEO" or "PICTURE"
+};
 function HomeScreen() {
     const navigation = useNavigation();
     const [configuration, setConfiguration] = React.useState<any>();
@@ -18,6 +32,7 @@ function HomeScreen() {
 
     const [tag, setTag] = React.useState<any>(undefined);
     const [metaData, setMetaData] = React.useState<any>(undefined);
+    const [uploadImagePath, setUploadImagePath] = React.useState<any>();
     useEffect(() => {
 
         authentication('EPhPPsbv7e', '9lHCnkfeLl', "")
@@ -59,10 +74,13 @@ function HomeScreen() {
         initCameraScreen(configuration)
             .then((res) => {
                 let obj = JSON.parse(res);
-
-                setUploadPath(obj);
+                const videos: MediaItem[] = obj.filter((item: { type: string; }) => item.type === "VIDEO");
+                const pictures: MediaItem[] = obj.filter((item: { type: string; }) => item.type === "PICTURE");
                 upload(obj);
-                setObjectValue(obj);
+                setUploadPath(videos);
+                setObjectValue(videos);
+                setUploadImagePath(pictures);
+                setImageObjectValue(pictures);
 
             })
             .catch((err) => {
@@ -84,10 +102,19 @@ function HomeScreen() {
         }
     };
 
-    const setObjectValue = async (value) => {
+    const setObjectValue = async (value: any) => {
         try {
             const jsonValue = JSON.stringify(value)
             await AsyncStorage.setItem('fileList', jsonValue)
+        } catch (e) {
+            // save error
+        }
+    };
+
+    const setImageObjectValue = async (value: any) => {
+        try {
+            const jsonValue = JSON.stringify(value)
+            await AsyncStorage.setItem('fileImageList', jsonValue)
         } catch (e) {
             // save error
         }
@@ -115,6 +142,9 @@ function HomeScreen() {
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('Video', { uploadPath })}>
                     <Text style={styles.text}>Video</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('Image', { uploadImagePath })}>
+                    <Text style={styles.text}>Image</Text>
                 </TouchableOpacity>
             </View>
 

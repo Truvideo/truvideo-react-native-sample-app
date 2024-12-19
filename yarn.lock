@@ -4920,6 +4920,10 @@ tr46@~0.0.3:
   dependencies:
     yarn "^1.22.22"
 
+"truvideo-react-image-sdk@git+https://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@github.com/Truvideo/TruVideoReactImageSdk.git#release-version-76":
+  version "0.1.0"
+  resolved "git+https://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@github.com/Truvideo/TruVideoReactImageSdk.git#112e26bf8f060c83a710b32709737afb7145299c"
+
 "truvideo-react-media-sdk@git+https://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@github.com/Truvideo/TruVideoReactMediaSdk.git#release-version-76":
   version "0.1.0"
   resolved "git+https://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@github.com/Truvideo/TruVideoReactMediaSdk.git#863fee9a06553b6b462b0bf4a6d15141c4e5d6e8"
