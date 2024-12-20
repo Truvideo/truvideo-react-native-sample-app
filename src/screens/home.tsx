@@ -71,25 +71,23 @@ const HomeScreen: React.FC = () => {
     }, []);
 
     const initCamera = async () => {
-        try {
-            await AsyncStorage.multiRemove(['fileList', 'fileImageList']);
+        await AsyncStorage.multiRemove(['fileList', 'fileImageList']);
+        if (configuration) {
+            initCameraScreen(configuration)
+                .then((response) => {
+                    const mediaItems: MediaItem[] = JSON.parse(response);
+                    const videos = mediaItems.filter((item) => item.type === 'VIDEO');
+                    const pictures = mediaItems.filter((item) => item.type === 'PICTURE');
+                    uploadMediaItems(mediaItems);
+                    setUploadPath(videos);
+                    setUploadImagePath(pictures);
+                    saveToStorage('fileList', videos);
+                    saveToStorage('fileImageList', pictures);
 
-            if (configuration) {
-                const response = await initCameraScreen(configuration);
-                const mediaItems: MediaItem[] = JSON.parse(response);
-                const videos = mediaItems.filter((item) => item.type === 'VIDEO');
-                const pictures = mediaItems.filter((item) => item.type === 'PICTURE');
-
-                setUploadPath(videos);
-                setUploadImagePath(pictures);
-
-                await uploadMediaItems(mediaItems);
-                await saveToStorage('fileList', videos);
-                await saveToStorage('fileImageList', pictures);
-                
-            }
-        } catch (error) {
-            console.error('Camera initialization error:', error);
+                })
+                .catch((err) => {
+                    console.log('err', err);
+                });
         }
     };
 
