@@ -1,279 +1,246 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
 import CustomBtn from '../components/button';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { getVideoInfo, mergeVideos, getResultPath, editVideo, compareVideos, concatVideos, encodeVideo, generateThumbnail, cleanNoise } from 'truvideo-react-video-sdk';
+import {
+    getVideoInfo,
+    mergeVideos,
+    getResultPath,
+    editVideo,
+    compareVideos,
+    concatVideos,
+    encodeVideo,
+    generateThumbnail,
+    cleanNoise,
+} from 'truvideo-react-video-sdk';
 
-const Checkbox = ({ checked, onPress }) => {
+interface MediaItem {
+    filePath: string;
+    createdAt: number;
+}
+
+interface CheckboxProps {
+    checked: boolean;
+    onPress: () => void;
+}
+
+const Checkbox: React.FC<CheckboxProps> = ({ checked, onPress }) => {
     return (
-        <TouchableOpacity onPress={onPress} style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <View
-                style={{
-                    height: 20,
-                    width: 20,
-                    borderWidth: 2,
-                    borderColor: '#000',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    marginRight: 10,
-                }}
-            >
-                {checked ? (
-                    <View
-                        style={{
-                            height: 14,
-                            width: 14,
-                            backgroundColor: '#2196F3',
-                        }}
-                    />
-                ) : null}
+        <TouchableOpacity onPress={onPress} style={styles.checkboxContainer}>
+            <View style={styles.checkboxOuter}>
+                {checked && <View style={styles.checkboxInner} />}
             </View>
         </TouchableOpacity>
     );
 };
 
-function VideoScreen() {
-    const [uploadPath, setUploadPath] = React.useState<any>();
-    const [selectedItems, setSelectedItems] = React.useState([]);
+const VideoScreen: React.FC = () => {
+    const [uploadPath, setUploadPath] = useState<MediaItem[] | null>(null);
+    const [selectedItems, setSelectedItems] = useState<string[]>([]);
 
     useEffect(() => {
-        getMyObject();
+        loadVideos();
     }, []);
 
-    const getMyObject = async () => {
+    const loadVideos = async () => {
         try {
             const jsonValue = await AsyncStorage.getItem('fileList');
-            setUploadPath(jsonValue != null ? JSON.parse(jsonValue) : null);
-        } catch (e) {
-            // read error
+            setUploadPath(jsonValue ? JSON.parse(jsonValue) : null);
+        } catch (error) {
+            console.error('Error loading video list:', error);
         }
     };
 
-    const toggleSelect = (id) => {
-        if (selectedItems.includes(id)) {
-            setSelectedItems(selectedItems.filter((item) => item !== id));
+    const toggleSelect = (filePath: string) => {
+        setSelectedItems((prev) =>
+            prev.includes(filePath) ? prev.filter((item) => item !== filePath) : [...prev, filePath]
+        );
+    };
+
+    const handleConcatVideos = async () => {
+        const videoStatus = await handleCompareVideos();
+        if (videoStatus) {
+            try {
+                const resultPath = await getResultPath(`${Date.now()}-concatVideo.mp4`);
+                const result = await concatVideos(selectedItems, resultPath);
+                console.log('Video concatenated successfully:', result);
+            } catch (error) {
+                console.error('Error concatenating videos:', error);
+            }
         } else {
-            setSelectedItems([...selectedItems, id]);
+            console.log('Videos are not compatible for concatenation.');
         }
     };
 
-    const renderItem = ({ item }) => (
-        <View style={styles.checkBox}>
+    const handleMergeVideos = async () => {
+        const config = {
+            height: '640',
+            width: '480',
+            framesRate: 'twentyFourFps',
+            videoCodec: 'h264',
+        };
 
+        try {
+            const resultPath = await getResultPath(`${Date.now()}-mergedVideo.mp4`);
+            const result = await mergeVideos(selectedItems, resultPath, JSON.stringify(config));
+            console.log('Videos merged successfully:', result);
+        } catch (error) {
+            console.error('Error merging videos:', error);
+        }
+    };
+
+    const handleEncodeVideo = async () => {
+        if (!selectedItems[0]) return;
+
+        const config = {
+            height: '640',
+            width: '480',
+            framesRate: 'thirtyFps',
+            videoCodec: 'libx264',
+        };
+
+        try {
+            const resultPath = await getResultPath(`${Date.now()}-encodedVideo.mp4`);
+            const result = await encodeVideo(selectedItems[0], resultPath, JSON.stringify(config));
+            console.log('Video encoded successfully:', result);
+        } catch (error) {
+            console.error('Error encoding video:', error);
+        }
+    };
+
+    const handleGenerateThumbnail = async () => {
+        if (!selectedItems[0]) return;
+
+        try {
+            const resultPath = await getResultPath(`${Date.now()}-thumbnail.png`);
+            const result = await generateThumbnail(selectedItems[0], resultPath, '1000', '640', '480');
+            console.log('Thumbnail generated successfully:', result);
+        } catch (error) {
+            console.error('Error generating thumbnail:', error);
+        }
+    };
+
+    const handleEditVideo = async () => {
+        if (!selectedItems[0]) return;
+
+        try {
+            const resultPath = await getResultPath(`${Date.now()}-editVideo.mp4`);
+            const result = await editVideo(selectedItems[0], resultPath);
+            console.log('Video edited successfully:', result);
+        } catch (error) {
+            console.error('Error editing video:', error);
+        }
+    };
+
+    const handleCleanNoise = async () => {
+        if (!selectedItems[0]) return;
+
+        try {
+            const resultPath = await getResultPath(`${Date.now()}-cleanNoise.mp4`);
+            const result = await cleanNoise(selectedItems[0], resultPath);
+            console.log('Noise cleaned successfully:', result);
+        } catch (error) {
+            console.error('Error cleaning noise:', error);
+        }
+    };
+
+    const handleCompareVideos = async () => {
+        try {
+            const result = await compareVideos(selectedItems);
+            console.log('Comparison result:', result);
+            return result;
+        } catch (error) {
+            console.error('Error comparing videos:', error);
+            return false;
+        }
+    };
+
+    const handleGetVideoInfo = async () => {
+        if (!selectedItems[0]) return;
+
+        try {
+            const videoInfo = await getVideoInfo(selectedItems[0]);
+            console.log('Video info:', videoInfo);
+        } catch (error) {
+            console.error('Error fetching video info:', error);
+        }
+    };
+
+    const renderItem = ({ item }: { item: MediaItem }) => (
+        <View style={styles.itemContainer}>
             <Checkbox
                 checked={selectedItems.includes(item.filePath)}
                 onPress={() => toggleSelect(item.filePath)}
             />
-            <Text style={{ marginRight: 10 }}>{item.filePath}</Text>
+            <Text style={styles.filePathText}>{item.filePath}</Text>
         </View>
     );
-
-    const __concatVideos = async() => {
-
-        const videoStatus = await __compareVideos();
-        if(videoStatus){
-            getResultPath(`${Date.now()}-concatVideo.mp4`)
-            .then((resulthPath) => {
-                concatVideos(selectedItems, resulthPath)
-                    .then((result) => {
-                        console.log('video concat successfully', result);
-                    })
-                    .catch((error) => {
-                        console.error('error: while video concat', error);
-                    })
-            })
-            .catch((err) => {
-                console.error('err', err);
-            });
-        }else{
-            console.log('Not concat video')
-        }
-    };
-
-    const __mergeVideos = () => {
-
-        const config = {
-            height: "640",
-            width: "480",
-            framesRate: "twentyFourFps",
-            videoCodec: "h264",
-        };
-
-        getResultPath(`${Date.now()}-example.mp4`)
-            .then((resulthPath) => {
-                mergeVideos(selectedItems, resulthPath, JSON.stringify(config))
-                    .then((res) => {
-                        console.log('res', res);
-                    })
-                    .catch((err) => {
-                        console.error('err', err);
-                    })
-            })
-            .catch((err) => {
-                console.error('err', err);
-            });
-    };
-
-    const __encodeVideo = () => {
-
-        const config = {
-            height: "640",
-            width: "480",
-            framesRate: "thirtyFps",
-            videoCodec: "libx264",
-        };
-
-        getResultPath(`${Date.now()}-encodeVideo.mp4`).then((resulthPath) => {
-            encodeVideo(selectedItems[0], resulthPath, JSON.stringify(config))
-                .then((result) => {
-                    console.log('video encoded successfully', result);
-                })
-                .catch((error) => {
-                    console.error('error: while video encoding', error);
-                });
-        });
-
-    };
-
-
-    const __generateThumbnail = () => {
-        getResultPath(`${Date.now()}-thumbnail.png`).then((resultPath) => {
-            generateThumbnail(selectedItems[0], resultPath, '1000', '640', '480').then((res) => {
-                console.log("Thumbnail path", res);
-            }).catch((err) => {
-                console.error("Error in generating thumbnail", err)
-            })
-        }).catch((err) => {
-            console.error("error in file path", err)
-        });
-
-    };
-
-    const __editVideo = () => {
-
-        getResultPath(`${Date.now()}-editVideo.mp4`)
-            .then((resulthPath) => {
-                editVideo(selectedItems[0], resulthPath)
-                    .then((result) => {
-                        console.log('video edited successfully', result);
-                    })
-                    .catch((error) => {
-                        console.error('error: while video editing', error);
-                    })
-            })
-            .catch((err) => {
-                console.error('err', err);
-            });
-    };
-
-    const __cleanNoise = () => {
-
-        getResultPath(`${Date.now()}-cleanNoise.mp4`).then((resultPath) => {
-            cleanNoise(selectedItems[0], resultPath)
-                .then((res) => {
-                    console.log("res", res);
-                })
-                .catch((err) => {
-                    console.error("err", err);
-                });
-        });
-    };
-
-    const __compareVideos = ():any => {
-        compareVideos(selectedItems).then((result) => {
-            console.log('result', result);
-            return result;
-        }).catch((error) => {
-            console.error('error', error);
-            return false;
-        });
-    };
-
-    const __getVideoInfo = () => {
-        getVideoInfo(selectedItems[0])
-            .then((videoInfo) => {
-                console.log('videoInfo', videoInfo);
-            })
-            .catch((err) => {
-                console.error('videoInfo err', err);
-            });
-    };
-
 
     return (
         <View style={styles.container}>
-
-            <View style={styles.list}>
-                <FlatList
-                    data={uploadPath}
-                    renderItem={renderItem}
-                    keyExtractor={(item) => item.createdAt}
-                />
-            </View>
+            <FlatList
+                contentContainerStyle={styles.list}
+                data={uploadPath}
+                renderItem={renderItem}
+                keyExtractor={(item) => item.createdAt.toString()}
+            />
             <View style={styles.row}>
-                <CustomBtn
-                    onPress={() => { __concatVideos() }}
-                    title="Concat"
-                />
-                <CustomBtn
-                    onPress={() => { __mergeVideos() }}
-                    title="Merge"
-                />
-                <CustomBtn
-                    onPress={() => { __encodeVideo() }}
-                    title="Encode"
-                />
-                <CustomBtn
-                    onPress={() => { __generateThumbnail() }}
-                    title="Thumbnail"
-                />
-                <CustomBtn
-                    onPress={() => { __editVideo() }}
-                    title="Edit"
-                />
-                <CustomBtn
-                    onPress={() => { __cleanNoise() }}
-                    title="Clear Noise"
-                />
-
+                <CustomBtn onPress={handleConcatVideos} title="Concat" />
+                <CustomBtn onPress={handleMergeVideos} title="Merge" />
+                <CustomBtn onPress={handleEncodeVideo} title="Encode" />
+                <CustomBtn onPress={handleGenerateThumbnail} title="Thumbnail" />
+                <CustomBtn onPress={handleEditVideo} title="Edit" />
+                <CustomBtn onPress={handleCleanNoise} title="Clear Noise" />
             </View>
-
         </View>
     );
-}
+};
 
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        padding: 10
-    },
-    button: {
-        marginTop: 12,
-        alignItems: 'center',
-        backgroundColor: '#3490CA',
         padding: 10,
-        width: 300,
-        borderRadius: 50,
+        backgroundColor: '#f8f9fa',
     },
-    text: {
-        color: '#ffffff'
+    list: {
+        paddingBottom: 10,
+    },
+    itemContainer: {
+        padding: 10,
+        borderBottomWidth: 1,
+        borderBottomColor: '#ddd',
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    filePathText: {
+        fontSize: 14,
+        color: '#333',
     },
     row: {
         flexDirection: 'row',
         flexWrap: 'wrap',
         justifyContent: 'center',
         alignItems: 'center',
+        marginTop: 20,
     },
-    list: {
-        height: '80%',
-        marginBottom: 15,
-        padding: 10
+    checkboxContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
     },
-    checkBox:{
-        padding: 10, 
-        flexDirection: 'row', 
-        alignItems: 'center', 
-    }
+    checkboxOuter: {
+        height: 20,
+        width: 20,
+        borderWidth: 2,
+        borderColor: '#000',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 10,
+    },
+    checkboxInner: {
+        height: 14,
+        width: 14,
+        backgroundColor: '#2196F3',
+    },
 });
 
 export default VideoScreen;

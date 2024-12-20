@@ -1,8 +1,11 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { authentication, clearAuthentication } from 'truvideo-react-core-sdk';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import {
+    authentication,
+    clearAuthentication,
+} from 'truvideo-react-core-sdk';
 import {
     initCameraScreen,
     LensFacing,
@@ -23,28 +26,33 @@ type MediaItem = {
         width: number;
     };
     rotation: string;
-    type: string; // "VIDEO" or "PICTURE"
+    type: 'VIDEO' | 'PICTURE';
 };
-function HomeScreen() {
+
+type Configuration = {
+    lensFacing: LensFacing;
+    flashMode: FlashMode;
+    orientation: Orientation;
+    outputPath: string;
+    frontResolutions: string[];
+    frontResolution: string;
+    backResolutions: string[];
+    backResolution: string;
+    mode: Mode;
+};
+
+const HomeScreen: React.FC = () => {
     const navigation = useNavigation();
-    const [configuration, setConfiguration] = React.useState<any>();
-    const [uploadPath, setUploadPath] = React.useState<any>();
+    const [configuration, setConfiguration] = useState<Configuration | null>(null);
+    const [uploadPath, setUploadPath] = useState<MediaItem[] | null>(null);
+    const [uploadImagePath, setUploadImagePath] = useState<MediaItem[] | null>(null);
+    const [tag, setTag] = useState<Record<string, string | number> | undefined>(undefined);
+    const [metaData, setMetaData] = useState<Record<string, any> | undefined>(undefined);
 
-    const [tag, setTag] = React.useState<any>(undefined);
-    const [metaData, setMetaData] = React.useState<any>(undefined);
-    const [uploadImagePath, setUploadImagePath] = React.useState<any>();
     useEffect(() => {
-
-        authentication('EPhPPsbv7e', '9lHCnkfeLl', "")
-            .then((res) => {
-                //handle response
-                console.log('res', res);
-            })
-            .catch((err) => {
-                //handle error
-                console.error('err', err);
-            });
-
+        authentication('EPhPPsbv7e', '9lHCnkfeLl', '')
+            .then((res) => console.log('Authentication successful:', res))
+            .catch((err) => console.error('Authentication error:', err));
 
         setConfiguration({
             lensFacing: LensFacing.Back,
@@ -57,107 +65,104 @@ function HomeScreen() {
             backResolution: 'nil',
             mode: Mode.VideoAndPicture,
         });
-        setTag({
-            key: "value",
-            color: "red",
-            orderNumber: "123"
-        });
-        setMetaData({
-            key: "value",
-            key1: 1,
-            key2: [4, 5, 6]
-        });
+
+        setTag({ key: 'value', color: 'red', orderNumber: 123 });
+        setMetaData({ key: 'value', key1: 1, key2: [4, 5, 6] });
     }, []);
 
-    const inItCamera = async () => {
-        await AsyncStorage.removeItem('fileList');
-        await AsyncStorage.removeItem('fileImageList');
-        initCameraScreen(configuration)
-            .then((res) => {
-                let obj = JSON.parse(res);
-                const videos: MediaItem[] = obj.filter((item: { type: string; }) => item.type === "VIDEO");
-                const pictures: MediaItem[] = obj.filter((item: { type: string; }) => item.type === "PICTURE");
-                upload(obj);
-                setUploadPath(videos);
-                setObjectValue(videos);
-                setUploadImagePath(pictures);
-                setImageObjectValue(pictures);
+    const initCamera = async () => {
+        try {
+            await AsyncStorage.multiRemove(['fileList', 'fileImageList']);
 
-            })
-            .catch((err) => {
-                console.log('err', err);
-            });
+            if (configuration) {
+                const response = await initCameraScreen(configuration);
+                const mediaItems: MediaItem[] = JSON.parse(response);
+                const videos = mediaItems.filter((item) => item.type === 'VIDEO');
+                const pictures = mediaItems.filter((item) => item.type === 'PICTURE');
+
+                setUploadPath(videos);
+                setUploadImagePath(pictures);
+
+                await uploadMediaItems(mediaItems);
+                await saveToStorage('fileList', videos);
+                await saveToStorage('fileImageList', pictures);
+                
+            }
+        } catch (error) {
+            console.error('Camera initialization error:', error);
+        }
     };
 
-    const upload = (data: any) => {
+    const uploadMediaItems = async (mediaItems: MediaItem[]) => {
         if (tag && metaData) {
-            for (let item of data) {
-                uploadMedia(item.filePath, tag, metaData)
-                    .then((res) => {
-                        console.log('Upload successful:', res);
-                    })
-                    .catch((err) => {
-                        console.log('Upload error:', err);
-                    })
+            for (const item of mediaItems) {
+                try {
+                    const result = await uploadMedia(item.filePath, tag, metaData);
+                    console.log('Upload successful:', result);
+                } catch (error) {
+                    console.error('Upload error:', error);
+                }
             }
         }
     };
 
-    const setObjectValue = async (value: any) => {
+    const saveToStorage = async (key: string, value: any) => {
         try {
-            const jsonValue = JSON.stringify(value)
-            await AsyncStorage.setItem('fileList', jsonValue)
-        } catch (e) {
-            // save error
+            const jsonValue = JSON.stringify(value);
+            await AsyncStorage.setItem(key, jsonValue);
+        } catch (error) {
+            console.error('Storage save error:', error);
         }
     };
 
-    const setImageObjectValue = async (value: any) => {
+    const clearAuth = async () => {
         try {
-            const jsonValue = JSON.stringify(value)
-            await AsyncStorage.setItem('fileImageList', jsonValue)
-        } catch (e) {
-            // save error
+            const result = await clearAuthentication();
+            console.log('Clear authentication successful:', result);
+        } catch (error) {
+            console.error('Clear authentication error:', error);
         }
-    };
-
-    const __clearAuth = () => {
-        clearAuthentication()
-            .then((setResult) => {
-                console.log(setResult, 'setResult');
-            })
-            .catch((err) => {
-                console.error('err', err);
-            });
-
     };
 
     return (
         <View style={styles.container}>
             <Image
-                style={{ width: 300, height: 70, }}
-                source={require('../../img/appstore.png')} />
-            <View style={{ marginTop: 30 }}>
-                <TouchableOpacity style={styles.button} onPress={() => inItCamera()}>
-                    <Text style={styles.text}>Camera</Text>
+                style={styles.logo}
+                source={require('../../img/appstore.png')}
+            />
+            <View style={styles.buttonContainer}>
+                <TouchableOpacity style={styles.button} onPress={initCamera}>
+                    <Text style={styles.buttonText}>Camera</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('Video', { uploadPath })}>
-                    <Text style={styles.text}>Video</Text>
+                <TouchableOpacity
+                    style={styles.button}
+                    onPress={() => navigation.navigate('Video', { uploadPath })}
+                >
+                    <Text style={styles.buttonText}>Video</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('Image', { uploadImagePath })}>
-                    <Text style={styles.text}>Image</Text>
+                <TouchableOpacity
+                    style={styles.button}
+                    onPress={() => navigation.navigate('Image', { uploadImagePath })}
+                >
+                    <Text style={styles.buttonText}>Image</Text>
                 </TouchableOpacity>
             </View>
-
         </View>
     );
-}
+};
 
 const styles = StyleSheet.create({
     container: {
         flex: 1,
         justifyContent: 'center',
-        alignItems: 'center'
+        alignItems: 'center',
+    },
+    logo: {
+        width: 300,
+        height: 70,
+    },
+    buttonContainer: {
+        marginTop: 30,
     },
     button: {
         marginTop: 12,
@@ -167,9 +172,9 @@ const styles = StyleSheet.create({
         width: 300,
         borderRadius: 50,
     },
-    text: {
-        color: '#ffffff'
-    }
+    buttonText: {
+        color: '#ffffff',
+    },
 });
 
 export default HomeScreen;

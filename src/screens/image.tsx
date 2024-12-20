@@ -1,97 +1,79 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { launchImageEdit, getFilePath } from 'truvideo-react-image-sdk';
 
+type MediaItem = {
+    filePath: string;
+    createdAt: number;
+};
 
-function ImageScreen() {
-    const [uploadImagePath, setUploadImagePath] = React.useState<any>();
+const ImageScreen: React.FC = () => {
+    const [uploadImagePath, setUploadImagePath] = useState<MediaItem[] | null>(null);
 
     useEffect(() => {
-        getMyObject();
+        loadImagePaths();
     }, []);
 
-    const getMyObject = async () => {
+    const loadImagePaths = async () => {
         try {
             const jsonValue = await AsyncStorage.getItem('fileImageList');
-            setUploadImagePath(jsonValue != null ? JSON.parse(jsonValue) : null);
-        } catch (e) {
-            // read error
+            setUploadImagePath(jsonValue ? JSON.parse(jsonValue) : null);
+        } catch (error) {
+            console.error('Error loading image paths:', error);
         }
     };
 
-
-    const __editImage = (selectedItems: string) => {
-
-        getFilePath(`${Date.now()}-editImage.png`)
-            .then((resulthPath) => {
-                launchImageEdit(selectedItems, resulthPath)
-                    .then((result) => {
-                        console.log('Image edited successfully', result);
-                    })
-                    .catch((error) => {
-                        console.error('error: while Image editing', error);
-                    })
-            })
-            .catch((err) => {
-                console.error('err', err);
-            });
+    const editImage = async (selectedItemPath: string) => {
+        try {
+            const resultPath = await getFilePath(`${Date.now()}-editImage.png`);
+            const result = await launchImageEdit(selectedItemPath, resultPath);
+            console.log('Image edited successfully:', result);
+        } catch (error) {
+            console.error('Error editing image:', error);
+        }
     };
 
-    const renderItem = ({ item }) => (
-        <View style={styles.checkBox}>
-            <TouchableOpacity onPress={() => __editImage(item.filePath)}>
-                    <Text style={{ marginRight: 10 }}>{item.filePath}</Text>
+    const renderItem = ({ item }: { item: MediaItem }) => (
+        <View style={styles.itemContainer}>
+            <TouchableOpacity onPress={() => editImage(item.filePath)}>
+                <Text style={styles.filePathText}>{item.filePath}</Text>
             </TouchableOpacity>
         </View>
     );
 
     return (
         <View style={styles.container}>
-
-            <View style={styles.list}>
-                <FlatList
-                    data={uploadImagePath}
-                    renderItem={renderItem}
-                    keyExtractor={(item) => item.createdAt}
-                />
-            </View>
+            <FlatList
+                contentContainerStyle={styles.list}
+                data={uploadImagePath}
+                renderItem={renderItem}
+                keyExtractor={(item) => item.createdAt.toString()}
+            />
         </View>
     );
-}
+};
 
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        padding: 10
-    },
-    button: {
-        marginTop: 12,
-        alignItems: 'center',
-        backgroundColor: '#3490CA',
         padding: 10,
-        width: 300,
-        borderRadius: 50,
-    },
-    text: {
-        color: '#ffffff'
-    },
-    row: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        justifyContent: 'center',
-        alignItems: 'center',
+        backgroundColor: '#f8f9fa',
     },
     list: {
-        height: '80%',
-        marginBottom: 15,
-        padding: 10
+        paddingBottom: 10,
     },
-    checkBox:{
-        padding: 10, 
-        flexDirection: 'row', 
-        alignItems: 'center', 
-    }
+    itemContainer: {
+        padding: 10,
+        borderBottomWidth: 1,
+        borderBottomColor: '#ddd',
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    filePathText: {
+        fontSize: 14,
+        color: '#333',
+    },
 });
 
 export default ImageScreen;
