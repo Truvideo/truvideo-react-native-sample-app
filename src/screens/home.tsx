@@ -3,8 +3,12 @@ import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
-    authentication,
     clearAuthentication,
+    isAuthenticated,
+    isAuthenticationExpired,
+    generatePayload,
+    authenticate,
+    initAuthentication
 } from 'truvideo-react-core-sdk';
 import {
     initCameraScreen,
@@ -14,6 +18,7 @@ import {
     Mode,
 } from 'truvideo-react-camera-sdk';
 import { uploadMedia } from 'truvideo-react-media-sdk';
+import QuickCrypto from 'react-native-quick-crypto';
 
 type MediaItem = {
     cameraLensFacing: string;
@@ -50,10 +55,7 @@ const HomeScreen: React.FC = () => {
     const [metaData, setMetaData] = useState<Record<string, any> | undefined>(undefined);
 
     useEffect(() => {
-        authentication('EPhPPsbv7e', '9lHCnkfeLl', '')
-            .then((res) => console.log('Authentication successful:', res))
-            .catch((err) => console.error('Authentication error:', err));
-
+        authFunc();
         setConfiguration({
             lensFacing: LensFacing.Back,
             flashMode: FlashMode.Off,
@@ -68,7 +70,45 @@ const HomeScreen: React.FC = () => {
 
         setTag({ key: 'value', color: 'red', orderNumber: 123 });
         setMetaData({ key: 'value', key1: 1, key2: [4, 5, 6] });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
+
+    const authFunc = async () => {
+        try {
+            const isAuth = await isAuthenticated();
+            // Check if authentication token has expired
+            const isAuthExpired = await isAuthenticationExpired();
+            //generate payload for authentication
+            const payload = await generatePayload();
+            const apiKey = "EPhPPsbv7e";
+            const signature = "9lHCnkfeLl";
+            const sha256 = await toSha256String(signature, payload);
+            // Authenticate user
+            if (!isAuth || isAuthExpired) {
+                await authenticate(apiKey, payload, sha256, '');
+            }
+            // If user is authenticated successfully
+            const initAuth = await initAuthentication();
+            console.log('initAuth', initAuth);
+        } catch (error) {
+            console.log('error', error);
+        }
+    };
+
+    const toSha256String = (signature: any, payload: any) => {
+        try {
+            // Create HMAC using 'sha256' and the provided signature as the key
+            const hmac = QuickCrypto.createHmac('sha256', signature);
+            // Update the HMAC with the payload
+            hmac.update(payload);
+            // Generate the HMAC digest and convert it to a hex string
+            const hash = hmac.digest('hex');
+            return hash;
+        } catch (error) {
+            console.error('Error generating SHA256 string:', error);
+            return '';
+        }
+    };
 
     const initCamera = async () => {
         await AsyncStorage.multiRemove(['fileList', 'fileImageList']);
