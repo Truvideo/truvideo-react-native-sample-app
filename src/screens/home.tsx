@@ -116,6 +116,7 @@ const HomeScreen: React.FC = () => {
             initCameraScreen(configuration)
                 .then((response) => {
                     const mediaItems: MediaItem[] = JSON.parse(response);
+                    console.log("mediaItems", mediaItems)
                     const videos = mediaItems.filter((item) => item.type === 'VIDEO');
                     const pictures = mediaItems.filter((item) => item.type === 'PICTURE');
                     uploadMediaItems(mediaItems);
